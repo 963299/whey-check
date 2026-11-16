@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whey Check</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E7C66">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#EEF2F0;--card:#fff;--ink:#16302B;--mut:#5B706A;--acc:#0E7C66;--line:#D5DFDB;--ok:#0E7C66;--mid:#B7791F;--bad:#B42318}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1A17;--card:#17261F;--ink:#E6F0EC;--mut:#93A9A2;--line:#2A3D36;--acc:#3DBE9F;--ok:#3DBE9F;--mid:#E0A53A;--bad:#F0786C}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;margin:8px 0 4px}
+p.sub{margin:0 0 20px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+label{display:block;font-size:.9rem;color:var(--mut);margin:12px 0 4px}
+.card>label:first-child{margin-top:0}
+input,select{width:100%;font:inherit;font-size:1.05rem;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input:focus,select:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pct{font-size:3.2rem;font-weight:700;line-height:1;margin:0}
+.nota{font-weight:700;margin:4px 0 12px}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:12px 0}
+.bar i{display:block;height:100%;width:0;transition:width .3s}
+.met{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.met small{display:block;color:var(--mut)}
+.met b{text-align:right}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 16px;background:var(--acc);color:#fff;cursor:pointer;width:100%;margin-top:12px}
+button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.4}
+.head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.head select{width:auto;font-size:.9rem;padding:6px 8px}
+.item{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.pos{font-size:1.4rem;font-weight:700;min-width:1.6rem;color:var(--mut)}
+.item:first-of-type .pos{color:var(--acc)}
+.info{flex:1;min-width:0}
+.info b{display:block;overflow-wrap:anywhere}
+.info small{display:block;color:var(--mut)}
+.acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.acts button,.acts a{width:auto;margin:0;padding:5px 10px;font-size:.85rem;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);text-decoration:none;font-weight:600}
+.vazio,.hint{color:var(--mut);font-size:.9rem}
+.hint{margin:10px 0 0}
+#msg{color:var(--bad);font-size:.9rem;min-height:1.2em;margin:8px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Whey Check</h1>
+<p class="sub">Digite os dados do rótulo, salve até 10 produtos e veja o ranking.</p>
+
+<section class="card">
+<label for="nome">Nome do produto</label>
+<input id="nome" type="text" placeholder="Ex.: Whey Marca X baunilha">
+<label for="url">Link do produto (opcional)</label>
+<input id="url" type="url" inputmode="url" placeholder="https://...">
+<div class="row">
+<div><label for="por">Porção (g)</label><input id="por" type="number" inputmode="decimal" placeholder="30"></div>
+<div><label for="pro">Proteína por porção (g)</label><input id="pro" type="number" inputmode="decimal" placeholder="24"></div>
+<div><label for="leu">Leucina por porção (g)</label><input id="leu" type="number" inputmode="decimal" placeholder="2,6"></div>
+<div><label for="pote">Peso do pote (g)</label><input id="pote" type="number" inputmode="decimal" placeholder="900"></div>
+</div>
+<label for="preco">Preço do pote (R$)</label>
+<input id="preco" type="number" inputmode="decimal" placeholder="129,90">
+<p class="hint">Leucina, peso do pote e preço são opcionais. Sem leucina, o teste de pureza não aparece. Sem peso e preço, não há cálculo de custo.</p>
+</section>
+
+<section class="card" aria-live="polite">
+<p class="pct" id="pct">–</p>
+<p class="nota" id="nota">Preencha porção e proteína.</p>
+<div class="bar"><i id="barra"></i></div>
+<div class="met" id="rLp" hidden><span>Leucina na proteína<small id="rLpTxt"></small></span><b id="vLp"></b></div>
+<div class="met" id="rC100" hidden><span>Preço por 100 g de proteína</span><b id="vC100"></b></div>
+<div class="met" id="rCl" hidden><span>Preço por g de leucina</span><b id="vCl"></b></div>
+<div class="met" id="rPr" hidden><span>Porções para 2,5 g de leucina<small>Dose usada na maioria dos estudos</small></span><b id="vPr"></b></div>
+<button id="salvar" disabled>Salvar no ranking</button>
+<button id="cancelar" class="sec" hidden>Cancelar edição</button>
+<p id="msg" role="alert"></p>
+</section>
+
+<section class="card">
+<div class="head"><b id="tit">Ranking (0/10)</b>
+<select id="ord" aria-label="Ordenar ranking">
+<option value="c100">Menor preço por proteína</option>
+<option value="pct">Maior % de proteína</option>
+<option value="cl">Menor preço por leucina</option>
+</select></div>
+<div id="lista"></div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const MAX=10,KEY='whey-lista';
+const parse=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)&&n>0?n:null};
+const f1=n=>n.toFixed(1).replace('.',',');
+const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+let editId=null;
+
+function normUrl(v){v=v.trim();if(!v)return'';if(!/^https?:\/\//i.test(v))v='https://'+v;try{const u=new URL(v);return/^https?:$/.test(u.protocol)?u.href:''}catch(e){return''}}
+function ler(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+function gravar(l){try{localStorage.setItem(KEY,JSON.stringify(l))}catch(e){}}
+
+function derive(x){
+  const p=x.pro/x.por*100,r={p,c100:null,lp:null,cl:null,pr:null,erro:null};
+  if(p>100){r.erro='A proteína não pode passar da porção.';return r}
+  if(x.pote&&x.preco)r.c100=x.preco/(x.pote*p/100)*100;
+  if(x.leu){
+    if(x.leu>x.pro){r.erro='A leucina não pode passar da proteína.';return r}
+    r.lp=x.leu/x.pro*100;r.pr=2.5/x.leu;
+    if(x.pote&&x.preco)r.cl=x.preco/(x.pote/x.por*x.leu);
+  }
+  return r;
+}
+function notaProt(p){
+  if(p>=80)return['Ótimo','var(--ok)'];
+  if(p>=70)return['Bom','var(--ok)'];
+  if(p>=60)return['Regular','var(--mid)'];
+  return['Fraco','var(--bad)'];
+}
+function notaLeu(l){
+  if(l<9)return['Baixa: parte da proteína pode não ser do soro do leite','var(--bad)'];
+  if(l<=13)return['Normal para whey','var(--ok)'];
+  return['Alta: pode ter leucina adicionada','var(--mid)'];
+}
+function ler_form(){
+  const por=parse($('por').value),pro=parse($('pro').value);
+  if(!por||!pro)return null;
+  return{nome:$('nome').value.trim()||'Produto sem nome',url:normUrl($('url').value),por,pro,leu:parse($('leu').value),pote:parse($('pote').value),preco:parse($('preco').value)};
+}
+function show(id,on,txt){$(id).hidden=!on;if(on&&txt!==undefined)$(txt[0]).textContent=txt[1]}
+
+function calc(){
+  const x=ler_form();
+  ['rLp','rC100','rCl','rPr'].forEach(i=>$(i).hidden=true);
+  $('msg').textContent='';
+  if(!x){$('pct').textContent='–';$('pct').style.color='';$('nota').textContent='Preencha porção e proteína.';$('nota').style.color='';$('barra').style.width='0';$('salvar').disabled=true;return}
+  const r=derive(x),[t,c]=notaProt(r.p);
+  $('pct').textContent=f1(r.p)+'%';$('pct').style.color=c;
+  $('barra').style.width=Math.min(r.p,100)+'%';$('barra').style.background=c;
+  if(r.erro){$('nota').textContent=r.erro;$('nota').style.color='var(--bad)';$('salvar').disabled=true;return}
+  $('nota').textContent=t;$('nota').style.color=c;
+  if(r.lp!==null){const[lt,lc]=notaLeu(r.lp);$('rLp').hidden=false;$('rLpTxt').textContent=lt;$('vLp').textContent=f1(r.lp)+'%';$('vLp').style.color=lc;
+    $('rPr').hidden=false;$('vPr').textContent=f1(r.pr)+(r.pr<=1.05?' porção':' porções')}
+  if(r.c100!==null){$('rC100').hidden=false;$('vC100').textContent=brl(r.c100)}
+  if(r.cl!==null){$('rCl').hidden=false;$('vCl').textContent=brl(r.cl)}
+  $('salvar').disabled=false;
+}
+['nome','url','por','pro','leu','pote','preco'].forEach(i=>$(i).addEventListener('input',calc));
+
+function limpar(){['nome','url','por','pro','leu','pote','preco'].forEach(i=>$(i).value='');editId=null;$('salvar').textContent='Salvar no ranking';$('cancelar').hidden=true;calc()}
+$('cancelar').onclick=limpar;
+$('salvar').onclick=()=>{
+  const x=ler_form();if(!x)return;
+  const l=ler();
+  if(editId){const i=l.findIndex(y=>y.id===editId);if(i>=0)l[i]={...x,id:editId}}
+  else{
+    if(l.length>=MAX){$('msg').textContent='O ranking já tem 10 produtos. Remova um para salvar outro.';return}
+    l.push({...x,id:Date.now()});
+  }
+  gravar(l);limpar();desenhar();
+};
+
+const chave={c100:r=>r.c100,cl:r=>r.cl,pct:r=>r.p};
+function desenhar(){
+  const l=ler(),ord=$('ord').value;
+  $('tit').textContent='Ranking ('+l.length+'/'+MAX+')';
+  const box=$('lista');box.textContent='';
+  if(!l.length){const p=document.createElement('p');p.className='vazio';p.textContent='Nenhum produto salvo. Preencha os dados acima e toque em "Salvar no ranking".';box.append(p);return}
+  const it=l.map(x=>({x,r:derive(x)})).filter(o=>!o.r.erro);
+  it.sort((a,b)=>{
+    const ka=chave[ord](a.r),kb=chave[ord](b.r);
+    if(ka===null&&kb===null)return 0;if(ka===null)return 1;if(kb===null)return-1;
+    return ord==='pct'?kb-ka:ka-kb;
+  });
+  it.forEach((o,i)=>{
+    const{x,r}=o,d=document.createElement('div');d.className='item';
+    const pos=document.createElement('div');pos.className='pos';pos.textContent=(i+1)+'º';
+    const info=document.createElement('div');info.className='info';
+    const n=document.createElement('b');n.textContent=x.nome;
+    const s1=document.createElement('small');
+    s1.textContent=f1(r.p)+'% de proteína'+(r.lp!==null?' · leucina '+f1(r.lp)+'%':'');
+    const s2=document.createElement('small');
+    s2.textContent=(r.c100!==null?brl(r.c100)+' por 100 g de proteína':'sem preço')+(r.cl!==null?' · '+brl(r.cl)+' por g de leucina':'');
+    const a=document.createElement('div');a.className='acts';
+    if(x.url){const k=document.createElement('a');k.href=x.url;k.target='_blank';k.rel='noopener noreferrer';k.textContent='Abrir link';a.append(k)}
+    const e=document.createElement('button');e.textContent='Editar';e.onclick=()=>editar(x.id);
+    const rm=document.createElement('button');rm.textContent='Remover';rm.onclick=()=>{gravar(ler().filter(y=>y.id!==x.id));if(editId===x.id)limpar();desenhar()};
+    a.append(e,rm);info.append(n,s1,s2,a);d.append(pos,info);box.append(d);
+  });
+}
+function editar(id){
+  const x=ler().find(y=>y.id===id);if(!x)return;
+  editId=id;
+  $('nome').value=x.nome;$('url').value=x.url||'';$('por').value=x.por;$('pro').value=x.pro;$('leu').value=x.leu||'';$('pote').value=x.pote||'';$('preco').value=x.preco||'';
+  $('salvar').textContent='Atualizar produto';$('cancelar').hidden=false;calc();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('ord').addEventListener('change',desenhar);
+desenhar();calc();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
